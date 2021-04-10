@@ -9,6 +9,7 @@
     "dotenv": "^8.2.0",
     "express": "~4.16.1",
     "node-persist": "2.1.0",
+    "tracery-grammar": "2.x",
     "twit": "^2.2.11"
   },
   "devDependencies": {

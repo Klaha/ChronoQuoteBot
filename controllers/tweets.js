@@ -3,6 +3,7 @@ var Twit = require('twit');
 const storage = require('node-persist')
 
 const { twitConfig } = require('../helpers/twit-config');
+const { generateStatus } = require('../helpers/generate-status');
 
 // Storage Init.
 storage.initSync();
@@ -24,9 +25,12 @@ const createTweet = async (req, res = response) => {
     })
   }
 
+  // We generate a new status using tracery.
+  const status = generateStatus();
+
   // We proceed to create an instance of Twit and tweet.
   const T = new Twit(twitConfig);
-  T.post('statuses/update', { status: 'hello world v7' }, (err) => {
+  T.post('statuses/update', { status }, (err) => {
     if (!err) {
 
       // We set actual time (now) into storage.
@@ -44,7 +48,6 @@ const createTweet = async (req, res = response) => {
       })
     }
   });
-
 };
 
 module.exports = {
