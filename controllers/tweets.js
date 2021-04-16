@@ -4,25 +4,34 @@ const storage = require('node-persist')
 
 const { twitConfig } = require('../helpers/twit-config');
 const { generateStatus } = require('../helpers/generate-status');
+const { saveConnectionLog, saveResponseLog, getConnectionLog, getResponseLog } = require('../helpers/logger');
 
-// Storage Init.
-storage.initSync();
+(async () => {
+  // Storage Init
+  await storage.init();
+})();
 
-const threeHoursSinceLastTweet = (actualDate) => {
-  const lastTweet = storage.getItemSync("lastRun") || 0;
-  const threeHoursSinceLastTweet = lastTweet + (180 * 60 * 1000);
-  return actualDate > threeHoursSinceLastTweet;
+const twelveHoursSinceLastTweet = async (actualDate) => {
+  const lastTweet = await storage.getItem("lastRun") || 0;
+  const twelveHoursSinceLastTweet = lastTweet + (720 * 60 * 1000);
+  return actualDate > twelveHoursSinceLastTweet;
 }
 
 const createTweet = async (req, res = response) => {
   const now = Date.now();
+  saveConnectionLog(now);
 
   // We check if at least 3 hours has passed since last tweet
-  if (!threeHoursSinceLastTweet(now)) {
-    return res.status(401).json({
+  const allowedToPost = await twelveHoursSinceLastTweet(now);
+
+  if (!allowedToPost) {
+    saveResponseLog(now, false);
+    res.status(200).json({
       ok: false,
-      msg: 'Slowdown! Lets wait a little bit'
-    })
+      msg: 'Slowdown! Lets wait a little bit',
+      allowedToPost
+    });
+    return;
   }
 
   // We generate a new status using tracery.
@@ -30,11 +39,12 @@ const createTweet = async (req, res = response) => {
 
   // We proceed to create an instance of Twit and tweet.
   const T = new Twit(twitConfig);
-  T.post('statuses/update', { status }, (err) => {
+  T.post('statuses/update', { status }, async (err) => {
     if (!err) {
 
       // We set actual time (now) into storage.
-      storage.setItemSync("lastRun", now);
+      await storage.setItem("lastRun", now);
+      saveResponseLog(now, true);
 
       res.json({
         ok: true,
@@ -50,6 +60,19 @@ const createTweet = async (req, res = response) => {
   });
 };
 
+const botStatus = async (req, res = response) => {
+  let lastTweetWasOn = new Date(await storage.getItem("lastRun")).toLocaleString("es-ES", { timeZone: "America/Santiago" });
+  let nextTweetOn = new Date(await storage.getItem("lastRun") + (720 * 60 * 1000)).toLocaleString("es-ES", { timeZone: "America/Santiago" });
+
+  res.status(200).json({
+    connectionLog: getConnectionLog(),
+    responseLog: getResponseLog(),
+    lastTweetWasOn,
+    nextTweetOn
+  })
+};
+
 module.exports = {
-  createTweet
+  createTweet,
+  botStatus
 }

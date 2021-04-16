@@ -1,8 +1,9 @@
 const { Router } = require('express');
 const router = Router();
-const { createTweet } = require('../controllers/tweets');
+const { createTweet, botStatus } = require('../controllers/tweets');
 
 // Tweet Posting Route
-router.all('/', createTweet );
+router.all('/', createTweet);
+router.all('/botstatus', botStatus);
 
 module.exports = router;
