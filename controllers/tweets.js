@@ -11,9 +11,9 @@ const { saveConnectionLog, saveResponseLog, getConnectionLog, getResponseLog } =
   await storage.init();
 })();
 
-const twelveHoursSinceLastTweet = async (actualDate) => {
+const allowedToTweet = async (actualDate) => {
   const lastTweet = await storage.getItem("lastRun") || 0;
-  const twelveHoursSinceLastTweet = lastTweet + (720 * 60 * 1000);
+  const twelveHoursSinceLastTweet = lastTweet + (process.env.POST_DELAY * 60 * 1000);
   return actualDate > twelveHoursSinceLastTweet;
 }
 
@@ -22,7 +22,7 @@ const createTweet = async (req, res = response) => {
   saveConnectionLog(now);
 
   // We check if at least 3 hours has passed since last tweet
-  const allowedToPost = await twelveHoursSinceLastTweet(now);
+  const allowedToPost = await allowedToTweet(now);
 
   if (!allowedToPost) {
     saveResponseLog(now, false);
@@ -62,7 +62,7 @@ const createTweet = async (req, res = response) => {
 
 const botStatus = async (req, res = response) => {
   let lastTweetWasOn = new Date(await storage.getItem("lastRun")).toLocaleString("es-ES", { timeZone: "America/Santiago" });
-  let nextTweetOn = new Date(await storage.getItem("lastRun") + (720 * 60 * 1000)).toLocaleString("es-ES", { timeZone: "America/Santiago" });
+  let nextTweetOn = new Date(await storage.getItem("lastRun") + (process.env.POST_DELAY * 60 * 1000)).toLocaleString("es-ES", { timeZone: "America/Santiago" });
 
   res.status(200).json({
     connectionLog: getConnectionLog(),
